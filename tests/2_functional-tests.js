@@ -5,6 +5,8 @@ const server = require('../server');
 
 chai.use(chaiHttp);
 
-suite('Functional Tests', function() {
-
+suite('Functional Tests', function () {
+  test('Creating a new thread: POST request to /api/threads/{board}', (done) => {
+    done();
+  });
 });
