@@ -1,18 +1,15 @@
 'use strict';
 const ThreadSchema = require('../models/thread');
 const mongoose = require('mongoose');
-const { ObjectId } = require('mongodb');
 
 module.exports = function (app) {
   app
     .route('/api/threads/:board')
-
     .post(async (req, res) => {
       const { text, delete_password } = req.body;
       const { board } = req.params;
       const collection = board;
       const Schema = mongoose.model('Thread', ThreadSchema, collection);
-
       if (!text || !delete_password) {
         return res.status(200).send('missing field(s)');
       }
@@ -33,7 +30,6 @@ module.exports = function (app) {
         console.log({ error: error.message });
       }
     })
-
     .get(async (req, res) => {
       const { board } = req.params;
       const collection = board;
@@ -55,7 +51,6 @@ module.exports = function (app) {
         console.log({ error: error.message });
       }
     })
-
     .delete(async (req, res) => {
       const { board } = req.params;
       const { thread_id, delete_password } = req.body;
@@ -80,19 +75,18 @@ module.exports = function (app) {
         console.log({ error: error.message });
       }
     })
-
     .put(async (req, res) => {
       const { board } = req.params;
-      const { report_id } = req.body;
+      const { thread_id } = req.body;
       const collection = board;
       const Schema = mongoose.model('Thread', ThreadSchema, collection);
 
-      if (!report_id) {
+      if (!thread_id) {
         return res.status(200).send('missing field(s)');
       }
 
       try {
-        const thread = await Schema.findById({ _id: report_id }).select(
+        const thread = await Schema.findById({ _id: thread_id }).select(
           'reported'
         );
         thread.reported = true;
@@ -105,7 +99,6 @@ module.exports = function (app) {
 
   app
     .route('/api/replies/:board')
-
     .post(async (req, res) => {
       const { board } = req.params;
       const { thread_id, delete_password, text } = req.body;
@@ -136,7 +129,6 @@ module.exports = function (app) {
         console.log({ error: error.message });
       }
     })
-
     .get(async (req, res) => {
       const { board } = req.params;
       const { thread_id } = req.query;
@@ -155,7 +147,6 @@ module.exports = function (app) {
         console.log({ error: error.message });
       }
     })
-
     .delete(async (req, res) => {
       const { thread_id, reply_id, delete_password } = req.body;
       const { board } = req.params;
@@ -170,18 +161,45 @@ module.exports = function (app) {
         const thread = await Schema.findById({ _id: thread_id }).select(
           'text created_on bumped_on replies replycount reported delete_password'
         );
-        const reply = thread.replies.find((reply) => reply.id === reply_id);
-        if (reply.delete_password === delete_password) {
-          const newReplies = thread.replies.filter((reply) => {
-            console.log(reply._id);
-          });
-
-          console.log({ newReplies });
-          thread.replies = newReplies;
+        const reply = thread.replies.find(
+          (reply) => reply.id.toString() === reply_id
+        );
+        if (reply && reply.delete_password === delete_password) {
+          reply.text = '[deleted]';
+          thread.replycount = thread.replycount - 1;
           await thread.save();
           res.status(200).send('success');
         } else {
           res.status(200).send('incorrect password');
+        }
+      } catch (error) {
+        console.log({ error: error.message });
+      }
+    })
+    .put(async (req, res) => {
+      const { thread_id, reply_id } = req.body;
+      const { board } = req.params;
+      const collection = board;
+
+      const Schema = mongoose.model('Thread', ThreadSchema, collection);
+
+      if (!thread_id || !reply_id) {
+        return res.status(200).send('missing field(s)');
+      }
+
+      try {
+        const thread = await Schema.findById({ _id: thread_id }).select(
+          'text created_on bumped_on replies replycount reported delete_password'
+        );
+        const reply = thread.replies.find(
+          (reply) => reply.id.toString() === reply_id
+        );
+
+        if (reply) {
+          reply.reported = true;
+
+          await thread.save();
+          res.status(200).send('reported');
         }
       } catch (error) {
         console.log({ error: error.message });
